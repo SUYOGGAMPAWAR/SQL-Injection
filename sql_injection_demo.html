@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL Injection Demo — College Mini Project</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a0f;
+    --panel: #0a1520;
+    --panel2: #0d1e2e;
+    --border: #1a3a5c;
+    --cyan: #00e5ff;
+    --red: #ff2d55;
+    --green: #00ff88;
+    --yellow: #ffd600;
+    --text: #c8dce8;
+    --dim: #5a7a8a;
+    --mono: 'Share Tech Mono', monospace;
+    --title: 'Orbitron', sans-serif;
+    --body: 'Exo 2', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Scan-line overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.07) 2px,
+      rgba(0,0,0,0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── HEADER ─────────────────────────────────── */
+  header {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 40px 20px 30px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,229,255,0.06) 0%, transparent 100%);
+  }
+
+  .badge {
+    display: inline-block;
+    background: rgba(255,45,85,0.15);
+    border: 1px solid var(--red);
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+    padding: 4px 12px;
+    border-radius: 2px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    animation: pulse-red 2s infinite;
+  }
+
+  @keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 6px rgba(255,45,85,0.3); }
+    50% { box-shadow: 0 0 18px rgba(255,45,85,0.7); }
+  }
+
+  h1 {
+    font-family: var(--title);
+    font-size: clamp(22px, 5vw, 48px);
+    font-weight: 900;
+    color: var(--cyan);
+    letter-spacing: 4px;
+    text-shadow: 0 0 30px rgba(0,229,255,0.5), 0 0 60px rgba(0,229,255,0.2);
+    line-height: 1.2;
+  }
+
+  h1 span { color: var(--red); }
+
+  .subtitle {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    font-family: var(--mono);
+  }
+
+  /* ─── LAYOUT ─────────────────────────────────── */
+  .container {
+    position: relative;
+    z-index: 5;
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 30px 20px 60px;
+  }
+
+  /* ─── SECTION TITLES ─────────────────────────── */
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .section-label .num {
+    font-family: var(--title);
+    font-size: 11px;
+    color: var(--cyan);
+    background: rgba(0,229,255,0.1);
+    border: 1px solid rgba(0,229,255,0.3);
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+
+  .section-label h2 {
+    font-family: var(--title);
+    font-size: 16px;
+    color: var(--text);
+    letter-spacing: 2px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+
+  /* ─── CARDS ──────────────────────────────────── */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0.5;
+  }
+
+  /* ─── HOW IT WORKS ───────────────────────────── */
+  .theory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .theory-card {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    position: relative;
+  }
+
+  .theory-card .icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+
+  .theory-card h3 {
+    font-family: var(--title);
+    font-size: 12px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .theory-card p {
+    font-size: 13px;
+    color: var(--dim);
+    line-height: 1.7;
+  }
+
+  /* ─── TWO-COLUMN DEMO ────────────────────────── */
+  .demo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+
+  @media (max-width: 800px) {
+    .demo-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ─── WEBSITE PANEL ──────────────────────────── */
+  .site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: #1a2a1a;
+    border-bottom: 1px solid #2a4a2a;
+    border-radius: 5px 5px 0 0;
+    margin: -24px -24px 20px;
+  }
+
+  .site-logo {
+    font-family: var(--title);
+    font-size: 14px;
+    color: #4caf50;
+    letter-spacing: 2px;
+  }
+
+  .site-logo span { color: #8bc34a; }
+
+  .site-nav { display: flex; gap: 14px; }
+  .site-nav a {
+    color: #6a9a6a;
+    font-size: 11px;
+    text-decoration: none;
+    letter-spacing: 1px;
+    font-family: var(--mono);
+    cursor: default;
+  }
+
+  .search-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .search-input {
+    flex: 1;
+    background: #0a1a0a;
+    border: 1px solid #2a4a2a;
+    color: #c8e8c8;
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .search-input:focus {
+    border-color: #4caf50;
+    box-shadow: 0 0 10px rgba(76,175,80,0.2);
+  }
+
+  .search-input.injected {
+    border-color: var(--red) !important;
+    box-shadow: 0 0 12px rgba(255,45,85,0.4) !important;
+    color: var(--red) !important;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-family: var(--title);
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-green {
+    background: #2a5a2a;
+    color: #8bc34a;
+    border: 1px solid #4caf50;
+  }
+
+  .btn-green:hover { background: #3a6a3a; box-shadow: 0 0 12px rgba(76,175,80,0.3); }
+
+  .btn-red {
+    background: rgba(255,45,85,0.15);
+    color: var(--red);
+    border: 1px solid var(--red);
+  }
+
+  .btn-red:hover { background: rgba(255,45,85,0.25); box-shadow: 0 0 12px rgba(255,45,85,0.3); }
+
+  .btn-cyan {
+    background: rgba(0,229,255,0.1);
+    color: var(--cyan);
+    border: 1px solid var(--cyan);
+  }
+
+  .btn-cyan:hover { background: rgba(0,229,255,0.2); box-shadow: 0 0 12px rgba(0,229,255,0.3); }
+
+  /* Product table */
+  .product-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+
+  .product-table th {
+    background: #1a3a1a;
+    color: #4caf50;
+    padding: 8px 10px;
+    text-align: left;
+    letter-spacing: 1px;
+    font-size: 10px;
+    border-bottom: 1px solid #2a4a2a;
+  }
+
+  .product-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #1a2a1a;
+    color: #a8c8a8;
+  }
+
+  .product-table tr:hover td { background: rgba(76,175,80,0.05); }
+
+  .product-table tr.sensitive td { color: var(--red); }
+  .product-table tr.sensitive td:first-child::before {
+    content: '⚠ ';
+  }
+
+  #product-results { min-height: 120px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 30px;
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .result-banner {
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    margin-bottom: 12px;
+    display: none;
+  }
+
+  .result-banner.normal { background: rgba(76,175,80,0.1); border: 1px solid #4caf50; color: #8bc34a; }
+  .result-banner.hacked { background: rgba(255,45,85,0.1); border: 1px solid var(--red); color: var(--red); animation: flash-red 0.5s ease; }
+
+  @keyframes flash-red {
+    0% { background: rgba(255,45,85,0.4); }
+    100% { background: rgba(255,45,85,0.1); }
+  }
+
+  /* ─── SQL PANEL ───────────────────────────────── */
+  .sql-panel {
+    background: #050a08;
+    border: 1px solid #1a3a2a;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+
+  .sql-panel-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .sql-code {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .sql-kw { color: #569cd6; }
+  .sql-str { color: #ce9178; }
+  .sql-inject { color: var(--red); font-weight: bold; text-decoration: underline; text-decoration-color: rgba(255,45,85,0.5); }
+  .sql-op { color: var(--green); }
+  .sql-table { color: #4ec9b0; }
+
+  /* Attack selector */
+  .attack-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .attack-btn {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    line-height: 1.4;
+  }
+
+  .attack-btn:hover { border-color: var(--red); color: var(--red); }
+  .attack-btn.active { border-color: var(--red); color: var(--red); background: rgba(255,45,85,0.1); }
+
+  .attack-btn .attack-name { font-weight: bold; display: block; margin-bottom: 2px; }
+  .attack-btn .attack-payload { color: var(--red); opacity: 0.7; font-size: 10px; }
+
+  /* Explanation box */
+  .explain-box {
+    background: rgba(255,214,0,0.05);
+    border: 1px solid rgba(255,214,0,0.2);
+    border-radius: 4px;
+    padding: 14px;
+    font-size: 12px;
+    color: #d4b800;
+    line-height: 1.7;
+    font-family: var(--body);
+  }
+
+  .explain-box strong { color: var(--yellow); }
+
+  /* ─── QUERY VIS ───────────────────────────────── */
+  .query-vis {
+    margin-bottom: 40px;
+  }
+
+  .query-vis .card {
+    padding: 30px;
+  }
+
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 20px 0;
+  }
+
+  .flow-box {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 20px;
+    text-align: center;
+    min-width: 140px;
+  }
+
+  .flow-box .fb-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .flow-box .fb-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--cyan);
+  }
+
+  .flow-box.danger { border-color: var(--red); }
+  .flow-box.danger .fb-val { color: var(--red); }
+
+  .flow-arrow {
+    font-size: 18px;
+    color: var(--dim);
+    padding: 0 8px;
+  }
+
+  /* ─── PREVENTION ─────────────────────────────── */
+  .prevention-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .prev-card {
+    background: var(--panel2);
+    border: 1px solid #1a3a2a;
+    border-radius: 6px;
+    padding: 20px;
+  }
+
+  .prev-card::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 3px;
+    background: var(--green);
+    margin-bottom: 14px;
+    border-radius: 2px;
+  }
+
+  .prev-card h3 {
+    font-family: var(--title);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .prev-card p {
+    font-size: 12px;
+    color: var(--dim);
+    line-height: 1.7;
+  }
+
+  .code-snippet {
+    background: #020705;
+    border: 1px solid #1a3a2a;
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #6dbe8d;
+    margin-top: 10px;
+    line-height: 1.6;
+  }
+
+  /* ─── FOOTER ─────────────────────────────────── */
+  footer {
+    position: relative;
+    z-index: 5;
+    text-align: center;
+    padding: 20px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 1px;
+  }
+
+  footer span { color: var(--cyan); }
+
+  /* Glitch animation for title */
+  @keyframes glitch {
+    0%, 90%, 100% { text-shadow: 0 0 30px rgba(0,229,255,0.5); transform: translate(0); }
+    92% { text-shadow: -3px 0 var(--red), 3px 0 var(--green); transform: translate(2px, 0); }
+    94% { text-shadow: 3px 0 var(--red), -3px 0 var(--green); transform: translate(-2px, 0); }
+    96% { text-shadow: 0 0 30px rgba(0,229,255,0.5); transform: translate(0); }
+  }
+
+  h1 { animation: glitch 5s infinite; }
+
+  /* Responsive */
+  @media(max-width:600px) {
+    .attack-selector { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── HEADER ──────────────────────────────── -->
+<header>
+  <div class="badge">⚠ Educational Purpose Only</div>
+  <h1>SQL <span>INJECTION</span></h1>
+  <div class="subtitle">College Mini Project &nbsp;·&nbsp; Web Application Security &nbsp;·&nbsp; Vulnerability Demonstration</div>
+</header>
+
+<div class="container">
+
+  <!-- ─── 01. WHAT IS SQL INJECTION ─── -->
+  <div class="section-label" style="margin-top:10px">
+    <div class="num">01</div><h2>WHAT IS SQL INJECTION?</h2>
+  </div>
+
+  <div class="theory-grid">
+    <div class="theory-card">
+      <div class="icon">🎯</div>
+      <h3>DEFINITION</h3>
+      <p>SQL Injection (SQLi) is an attack technique where malicious SQL code is inserted into an input field, causing the backend database to execute unintended queries — exposing, modifying, or deleting data.</p>
+    </div>
+    <div class="theory-card">
+      <div class="icon">⚙️</div>
+      <h3>HOW IT HAPPENS</h3>
+      <p>When user input is concatenated directly into a SQL query without sanitization, an attacker can close the original query with <code style="color:var(--red)">'</code> and append their own SQL commands.</p>
+    </div>
+    <div class="theory-card">
+      <div class="icon">💥</div>
+      <h3>IMPACT</h3>
+      <p>Authentication bypass, unauthorized data access, data tampering, full database dump, and in some cases, remote code execution on the server.</p>
+    </div>
+    <div class="theory-card">
+      <div class="icon">📊</div>
+      <h3>PREVALENCE</h3>
+      <p>SQLi consistently ranks in the OWASP Top 10 Web Vulnerabilities. It has been used in major breaches at Sony, Yahoo, LinkedIn, and thousands of smaller websites globally.</p>
+    </div>
+  </div>
+
+  <!-- ─── 02. LIVE DEMO ─── -->
+  <div class="section-label">
+    <div class="num">02</div><h2>LIVE DEMONSTRATION</h2>
+  </div>
+
+  <div class="demo-grid">
+    <!-- LEFT: Simulated website -->
+    <div class="card" id="website-panel">
+      <div class="site-header">
+        <div class="site-logo">SHOP<span>ZONE</span></div>
+        <div class="site-nav">
+          <a>Home</a><a>Products</a><a>About</a><a>Contact</a>
+        </div>
+      </div>
+
+      <p style="font-size:12px;color:var(--dim);margin-bottom:14px;font-family:var(--mono);">
+        // Search products by name:
+      </p>
+
+      <div class="search-form">
+        <input type="text" class="search-input" id="searchInput" placeholder="e.g.  Laptop" value="Laptop">
+        <button class="btn btn-green" onclick="runSearch()">SEARCH</button>
+      </div>
+
+      <div class="result-banner" id="resultBanner"></div>
+      <div id="product-results">
+        <div class="empty-state">→ Press SEARCH to query the database</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Attack panel -->
+    <div class="card">
+      <p style="font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:2px;margin-bottom:14px;">SELECT AN ATTACK PAYLOAD:</p>
+
+      <div class="attack-selector">
+        <button class="attack-btn" onclick="setAttack(0)">
+          <span class="attack-name">Normal Search</span>
+          <span class="attack-payload">Laptop</span>
+        </button>
+        <button class="attack-btn active" onclick="setAttack(1)">
+          <span class="attack-name">Classic OR 1=1</span>
+          <span class="attack-payload">' OR '1'='1</span>
+        </button>
+        <button class="attack-btn" onclick="setAttack(2)">
+          <span class="attack-name">Comment Bypass</span>
+          <span class="attack-payload">' OR 1=1 --</span>
+        </button>
+        <button class="attack-btn" onclick="setAttack(3)">
+          <span class="attack-name">UNION Attack</span>
+          <span class="attack-payload">' UNION SELECT --</span>
+        </button>
+      </div>
+
+      <!-- Generated SQL Query -->
+      <div class="sql-panel">
+        <div class="sql-panel-label">Generated SQL Query (Backend)</div>
+        <div class="sql-code" id="sqlDisplay">
+<span class="sql-kw">SELECT</span> * <span class="sql-kw">FROM</span> <span class="sql-table">products</span>
+<span class="sql-kw">WHERE</span> name = <span class="sql-str">'Laptop'</span>;
+        </div>
+      </div>
+
+      <!-- Explanation -->
+      <div class="explain-box" id="explainBox">
+        <strong>Normal Query:</strong> This is a legitimate search. The query looks for products with the name "Laptop" in the database. Only matching rows are returned.
+      </div>
+
+      <button class="btn btn-red" style="width:100%;margin-top:14px;padding:13px;" onclick="runAttack()">
+        ⚡ EXECUTE ATTACK
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── 03. QUERY VISUALIZATION ─── -->
+  <div class="section-label">
+    <div class="num">03</div><h2>QUERY BREAKDOWN</h2>
+  </div>
+
+  <div class="card query-vis" style="margin-bottom:40px;">
+    <div class="flow">
+      <div class="flow-box">
+        <div class="fb-label">USER INPUT</div>
+        <div class="fb-val" id="flowInput">Laptop</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">
+        <div class="fb-label">BACKEND CODE</div>
+        <div class="fb-val">Concatenation</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" id="flowQuery" style="">
+        <div class="fb-label">SQL QUERY</div>
+        <div class="fb-val">WHERE name='Laptop'</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" id="flowResult">
+        <div class="fb-label">DATABASE RESULT</div>
+        <div class="fb-val" style="color:var(--green)">Filtered Rows</div>
+      </div>
+    </div>
+
+    <div style="background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:16px;margin-top:10px;">
+      <div class="sql-panel-label" style="margin-bottom:10px;">VULNERABLE CODE (PHP Example):</div>
+      <div class="sql-code">
+<span class="sql-str">$input</span> = <span class="sql-op">$_GET</span>[<span class="sql-str">'search'</span>];  <span style="color:#555">// ← unsanitized user input</span>
+<span class="sql-str">$query</span> = <span class="sql-str">"SELECT * FROM products WHERE name = '"</span> . <span class="sql-str">$input</span> . <span class="sql-str">"'"</span>;
+<span class="sql-op">$result</span> = <span class="sql-op">mysqli_query</span>(<span class="sql-str">$conn</span>, <span class="sql-str">$query</span>);
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── 04. PREVENTION ─── -->
+  <div class="section-label">
+    <div class="num">04</div><h2>PREVENTION TECHNIQUES</h2>
+  </div>
+
+  <div class="prevention-grid">
+    <div class="prev-card">
+      <h3>PREPARED STATEMENTS</h3>
+      <p>Use parameterized queries where user input is passed separately — never concatenated into SQL.</p>
+      <div class="code-snippet">$stmt = $pdo->prepare(
+  "SELECT * FROM products
+   WHERE name = ?"
+);
+$stmt->execute([$input]);</div>
+    </div>
+    <div class="prev-card">
+      <h3>STORED PROCEDURES</h3>
+      <p>Encapsulate SQL logic in database-side procedures, preventing direct query manipulation from application code.</p>
+      <div class="code-snippet">CALL sp_GetProduct(
+  @ProductName
+);</div>
+    </div>
+    <div class="prev-card">
+      <h3>INPUT VALIDATION</h3>
+      <p>Whitelist valid characters, reject unexpected symbols like <code style="color:var(--red)">' -- ; /*</code>. Never rely on blacklisting alone.</p>
+      <div class="code-snippet">// Allow only alphanumeric
+if(!preg_match('/^[a-zA-Z0-9 ]+$/',
+   $input)) die("Invalid!");</div>
+    </div>
+    <div class="prev-card">
+      <h3>LEAST PRIVILEGE</h3>
+      <p>Database accounts used by the app should only have SELECT/INSERT on required tables — never admin or DROP privileges.</p>
+      <div class="code-snippet">GRANT SELECT, INSERT
+  ON shopzone.products
+  TO 'app_user'@'localhost';</div>
+    </div>
+    <div class="prev-card">
+      <h3>ORM / QUERY BUILDERS</h3>
+      <p>Use libraries like Hibernate, SQLAlchemy, or Eloquent. They auto-escape inputs and rarely expose raw SQL to user data.</p>
+      <div class="code-snippet">// Laravel / Eloquent
+Product::where('name',
+  $input)->get();</div>
+    </div>
+    <div class="prev-card">
+      <h3>WEB APPLICATION FIREWALL</h3>
+      <p>Deploy a WAF (e.g., ModSecurity, Cloudflare WAF) to detect and block SQLi patterns before they reach the application.</p>
+      <div class="code-snippet">SecRule ARGS "@detectSQLi"
+  "id:1001,phase:2,
+   deny,msg:'SQLi'"</div>
+    </div>
+  </div>
+
+  <!-- ─── 05. SUMMARY ─── -->
+  <div class="section-label">
+    <div class="num">05</div><h2>PROJECT SUMMARY</h2>
+  </div>
+
+  <div class="card" style="padding:30px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;">
+      <div>
+        <div style="font-family:var(--title);font-size:10px;color:var(--cyan);letter-spacing:2px;margin-bottom:10px;">TOPIC</div>
+        <div style="font-size:14px;color:var(--text)">SQL Injection Attack</div>
+      </div>
+      <div>
+        <div style="font-family:var(--title);font-size:10px;color:var(--cyan);letter-spacing:2px;margin-bottom:10px;">TYPE</div>
+        <div style="font-size:14px;color:var(--text)">Web Application Vulnerability</div>
+      </div>
+      <div>
+        <div style="font-family:var(--title);font-size:10px;color:var(--cyan);letter-spacing:2px;margin-bottom:10px;">SEVERITY</div>
+        <div style="font-size:14px;color:var(--red)">CRITICAL (CVSS 9.8 / 10)</div>
+      </div>
+      <div>
+        <div style="font-family:var(--title);font-size:10px;color:var(--cyan);letter-spacing:2px;margin-bottom:10px;">OWASP RANK</div>
+        <div style="font-size:14px;color:var(--text)">#3 — Injection Attacks</div>
+      </div>
+    </div>
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);font-size:13px;color:var(--dim);line-height:1.8;">
+      This project demonstrates how SQL Injection exploits unsanitized user input to manipulate backend database queries. 
+      The interactive demo above shows three attack variants — OR 1=1 bypass, comment-based bypass, and UNION-based data extraction — 
+      all simulated in JavaScript to illustrate real-world attack mechanics safely. Prevention techniques including prepared statements, 
+      input validation, and least-privilege access control are also covered.
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  COLLEGE MINI PROJECT &nbsp;·&nbsp; <span>SQL INJECTION DEMO</span> &nbsp;·&nbsp; FOR EDUCATIONAL USE ONLY
+</footer>
+
+<script>
+// ─── DATABASE SIMULATION ─────────────────────────────
+const db = {
+  products: [
+    { id: 1, name: "Laptop",       category: "Electronics", price: 54999,  stock: 12 },
+    { id: 2, name: "Smartphone",   category: "Electronics", price: 28999,  stock: 35 },
+    { id: 3, name: "Headphones",   category: "Audio",       price: 3499,   stock: 50 },
+    { id: 4, name: "Desk Chair",   category: "Furniture",   price: 8999,   stock: 8  },
+    { id: 5, name: "Coffee Maker", category: "Appliances",  price: 2199,   stock: 22 },
+    { id: 6, name: "Keyboard",     category: "Electronics", price: 1599,   stock: 40 },
+    { id: 7, name: "Monitor",      category: "Electronics", price: 19999,  stock: 15 },
+    { id: 8, name: "Webcam",       category: "Electronics", price: 3999,   stock: 18 },
+  ],
+  // Simulating a hidden users/admin table that attackers might expose via UNION
+  users: [
+    { id: 1, username: "admin",    password_hash: "5f4dcc3b5aa765...", role: "administrator" },
+    { id: 2, username: "db_user",  password_hash: "d8578edf8458ce...", role: "read-only"      },
+  ]
+};
+
+const attacks = [
+  {
+    label: "Normal Search",
+    input: "Laptop",
+    sql: `<span class="sql-kw">SELECT</span> * <span class="sql-kw">FROM</span> <span class="sql-table">products</span>\n<span class="sql-kw">WHERE</span> name = <span class="sql-str">'Laptop'</span>;`,
+    explain: `<strong>Normal Query:</strong> This is a legitimate search. The query looks for products with the name "Laptop" in the database. Only matching rows are returned. No vulnerability triggered.`,
+    flowQuery: "WHERE name='Laptop'",
+    flowResult: "Filtered Rows",
+    flowResultColor: "var(--green)",
+    flowDanger: false,
+    action: () => db.products.filter(p => p.name === "Laptop"),
+    sensitive: false
+  },
+  {
+    label: "Classic OR 1=1",
+    input: "' OR '1'='1",
+    sql: `<span class="sql-kw">SELECT</span> * <span class="sql-kw">FROM</span> <span class="sql-table">products</span>\n<span class="sql-kw">WHERE</span> name = <span class="sql-str">''</span> <span class="sql-op">OR</span> <span class="sql-inject">'1'='1'</span>;`,
+    explain: `<strong>Injection Successful!</strong> The attacker closes the string with <code>'</code>, then adds <code>OR '1'='1'</code> — a condition that is <em>always true</em>. The database now returns <em>every row</em> in the products table, ignoring the original filter entirely.`,
+    flowQuery: "WHERE name='' OR '1'='1'",
+    flowResult: "ALL ROWS DUMPED",
+    flowResultColor: "var(--red)",
+    flowDanger: true,
+    action: () => db.products,
+    sensitive: false
+  },
+  {
+    label: "Comment Bypass",
+    input: "' OR 1=1 --",
+    sql: `<span class="sql-kw">SELECT</span> * <span class="sql-kw">FROM</span> <span class="sql-table">products</span>\n<span class="sql-kw">WHERE</span> name = <span class="sql-str">''</span> <span class="sql-op">OR</span> <span class="sql-inject">1=1 <span style="color:#777">-- '</span></span>`,
+    explain: `<strong>Comment Bypass!</strong> The <code>--</code> is a SQL comment character. Everything after it is ignored by the database engine. This terminates the original closing quote, preventing syntax errors while still injecting <code>OR 1=1</code> to bypass filtering.`,
+    flowQuery: "WHERE name='' OR 1=1 --",
+    flowResult: "ALL ROWS DUMPED",
+    flowResultColor: "var(--red)",
+    flowDanger: true,
+    action: () => db.products,
+    sensitive: false
+  },
+  {
+    label: "UNION Attack",
+    input: "' UNION SELECT --",
+    sql: `<span class="sql-kw">SELECT</span> * <span class="sql-kw">FROM</span> <span class="sql-table">products</span>\n<span class="sql-kw">WHERE</span> name = <span class="sql-str">''</span>\n<span class="sql-inject">UNION SELECT id, username, password_hash,\n       role, NULL FROM users --</span>`,
+    explain: `<strong>UNION Injection!</strong> The attacker appends a <code>UNION SELECT</code> to pull data from an entirely different table — here, the <code>users</code> table. This can expose usernames and password hashes hidden from the normal application flow. Devastating for data breaches.`,
+    flowQuery: "UNION SELECT ... FROM users",
+    flowResult: "USERS TABLE LEAKED",
+    flowResultColor: "var(--red)",
+    flowDanger: true,
+    action: () => [
+      ...db.products.filter(() => false),
+      ...db.users.map(u => ({ id: u.id, name: u.username, category: u.role, price: "—", stock: u.password_hash }))
+    ],
+    sensitive: true
+  }
+];
+
+let currentAttack = 1;
+
+function setAttack(idx) {
+  currentAttack = idx;
+  document.querySelectorAll('.attack-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+  const a = attacks[idx];
+  document.getElementById('sqlDisplay').innerHTML = a.sql;
+  document.getElementById('explainBox').innerHTML = a.explain;
+  document.getElementById('searchInput').value = a.input;
+  document.getElementById('searchInput').classList.toggle('injected', idx > 0);
+  // Reset results
+  document.getElementById('product-results').innerHTML = '<div class="empty-state">→ Press EXECUTE ATTACK to see what happens</div>';
+  document.getElementById('resultBanner').style.display = 'none';
+  // Update flow
+  document.getElementById('flowInput').textContent = a.input;
+  document.getElementById('flowQuery').querySelector('.fb-val').textContent = a.flowQuery;
+  document.getElementById('flowQuery').classList.toggle('danger', a.flowDanger);
+  document.getElementById('flowResult').querySelector('.fb-val').textContent = a.flowResult;
+  document.getElementById('flowResult').querySelector('.fb-val').style.color = a.flowResultColor;
+}
+
+function runSearch() {
+  setAttack(0);
+  setTimeout(() => runAttack(), 100);
+}
+
+function runAttack() {
+  const a = attacks[currentAttack];
+  const rows = a.action();
+  const banner = document.getElementById('resultBanner');
+  const resultsEl = document.getElementById('product-results');
+
+  if (rows.length === 0) {
+    banner.className = 'result-banner normal';
+    banner.textContent = '✓ 0 records found.';
+    banner.style.display = 'block';
+    resultsEl.innerHTML = '<div class="empty-state">No products match your search.</div>';
+    return;
+  }
+
+  if (currentAttack === 0) {
+    banner.className = 'result-banner normal';
+    banner.textContent = `✓ Query OK — ${rows.length} record(s) returned.`;
+  } else {
+    banner.className = 'result-banner hacked';
+    banner.textContent = `⚠ INJECTION SUCCESS — ${rows.length} records exposed! Database compromised.`;
+  }
+  banner.style.display = 'block';
+
+  const cols = currentAttack === 3
+    ? ['ID', 'USERNAME', 'ROLE', 'PRICE_FIELD', 'PASSWORD_HASH']
+    : ['ID', 'NAME', 'CATEGORY', 'PRICE (₹)', 'STOCK'];
+
+  let html = `<table class="product-table"><thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(r => {
+    const cl = a.sensitive ? 'sensitive' : '';
+    html += `<tr class="${cl}">
+      <td>${r.id}</td>
+      <td>${r.name}</td>
+      <td>${r.category}</td>
+      <td>${r.price}</td>
+      <td>${r.stock}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  resultsEl.innerHTML = html;
+}
+
+// Init
+setAttack(1);
+</script>
+</body>
+</html>
